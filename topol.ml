@@ -3,7 +3,7 @@
 
 open PMap
 
-exception Cykliczne
+exception Cykliczne;;
 
 
 let topol (adjacency_list: ('a * 'a list) list) =
@@ -20,21 +20,51 @@ let topol (adjacency_list: ('a * 'a list) list) =
     empty
     adjacency_list in
     
-    let rec time_setter event time starting_event results=
-        if event = starting_event then
-            raise Cykliczne
-        else
-        if not (mem event results) then 
-            let (updated_time,updated_results) = List.fold_left (
-                fun (updated_time,updated_results) next_event ->
-                    time_setter next_event updated_time starting_event updated_results
-                ) 
-                (time,results) 
-                (find event adjacency_map) in
+    let rec time_setter results time visited event=
         
-        updated_time+1, add updated_time event updated_results
+        if not (mem event results) then
+
+            if mem event visited then
+                raise Cykliczne
+            else
+
+            let (updated_results,updated_time,updated_visited) =
+
+            try 
+                let next_events = find event adjacency_map in
+
+                 List.fold_left 
+                    
+                    (fun (updated_results , updated_time , updated_visited) next_event ->
+                        time_setter 
+                            updated_results 
+                            updated_time 
+                            updated_visited 
+                            next_event) 
+
+                    (results,time,add event 1 visited) 
+
+                    next_events
+            with
+                Not_found -> (results,time,add event 1 visited) in
+                
+            (add event updated_time updated_results,updated_time+1,updated_visited)
+
         else
-            time,results in
+            (results,time,visited) in
     
+    let (result_temp,time_end,_) = 
+    List.fold_left 
+        
+        (fun (results,time,visited) (event,_) ->
+            time_setter 
+                results 
+                time 
+                visited 
+                event) 
+
+        (empty,1,empty) 
+        adjacency_list in
     
+    (foldi (fun event time acc -> (time_end - (List.hd time),event)::acc) result_temp []) |> List.sort compare |> List.map snd;;
 
